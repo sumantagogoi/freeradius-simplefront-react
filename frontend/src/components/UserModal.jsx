@@ -1,27 +1,17 @@
 import { useState, useEffect } from 'react';
-import { updateUser } from '../api/users';
-import client from '../api/client';
-
-const EXTRA_FIELDS = ['Full-Name', 'Email', 'Phone', 'Notes'];
-const FIELD_LABELS = {
-  'Full-Name': 'Full Name',
-  Email: 'Email',
-  Phone: 'Phone',
-  Notes: 'Notes',
-};
+import { getUser, updateUser } from '../api/users';
 
 export default function UserModal({ user, onClose, onUpdated }) {
-  const [value, setValue] = useState(user.value);
-  const [extras, setExtras] = useState([]);
+  const [data, setData] = useState(null);
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Fetch all radcheck entries for this user
   useEffect(() => {
-    client
-      .get('/radius/users', { params: { username: user.username, all: true } })
-      .then(({ data }) => {
-        setExtras(data.filter((e) => e.attribute !== 'Cleartext-Password'));
+    getUser(user.username)
+      .then((u) => {
+        setData(u);
+        setPassword(u.password);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -30,7 +20,7 @@ export default function UserModal({ user, onClose, onUpdated }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateUser(user.id, { value });
+      await updateUser(user.username, { password });
       onUpdated();
       onClose();
     } catch (e) {
@@ -40,11 +30,32 @@ export default function UserModal({ user, onClose, onUpdated }) {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-md p-6 shadow-2xl">
+          <p className="text-gray-500 text-center">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-md p-6 shadow-2xl">
+          <p className="text-red-400 text-center">User not found</p>
+          <button onClick={onClose} className="mt-4 w-full py-2 bg-gray-700 hover:bg-gray-600 rounded text-white transition">Close</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-md p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">{user.username}</h3>
+          <h3 className="text-lg font-bold">{data.username}</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white text-xl"
@@ -54,41 +65,52 @@ export default function UserModal({ user, onClose, onUpdated }) {
         </div>
 
         <div className="space-y-4">
-          {/* Static details */}
           <div>
             <label className="block text-xs text-gray-400 mb-1">ID</label>
-            <p className="text-gray-300">{user.id}</p>
+            <p className="text-gray-300">{data.id}</p>
           </div>
 
           <div>
             <label className="block text-xs text-gray-400 mb-1">Username</label>
-            <p className="text-white font-medium">{user.username}</p>
+            <p className="text-white font-medium">{data.username}</p>
           </div>
 
           <div>
             <label className="block text-xs text-gray-400 mb-1">Password</label>
             <input
               type="text"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500 text-sm font-mono"
             />
           </div>
 
-          {/* Extra fields from radcheck */}
-          {loading ? (
-            <p className="text-gray-500 text-sm">Loading details...</p>
-          ) : extras.length === 0 ? (
+          {data.full_name && (
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Full Name</label>
+              <p className="text-gray-300">{data.full_name}</p>
+            </div>
+          )}
+          {data.email && (
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Email</label>
+              <p className="text-gray-300">{data.email}</p>
+            </div>
+          )}
+          {data.phone && (
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Phone</label>
+              <p className="text-gray-300">{data.phone}</p>
+            </div>
+          )}
+          {data.notes && (
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Notes</label>
+              <p className="text-gray-300">{data.notes}</p>
+            </div>
+          )}
+          {!data.full_name && !data.email && !data.phone && !data.notes && (
             <p className="text-gray-500 text-sm">No additional details</p>
-          ) : (
-            extras.map((entry) => (
-              <div key={entry.id}>
-                <label className="block text-xs text-gray-400 mb-1">
-                  {FIELD_LABELS[entry.attribute] || entry.attribute}
-                </label>
-                <p className="text-gray-300">{entry.value}</p>
-              </div>
-            ))
           )}
         </div>
 

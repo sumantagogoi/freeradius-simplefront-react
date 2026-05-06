@@ -30,7 +30,8 @@ export default function Users() {
       list = list.filter(
         (u) =>
           u.username.toLowerCase().includes(q) ||
-          u.value.toLowerCase().includes(q)
+          u.password.toLowerCase().includes(q) ||
+          (u.full_name && u.full_name.toLowerCase().includes(q))
       );
     }
     list = [...list].sort((a, b) => {
@@ -55,11 +56,11 @@ export default function Users() {
     return <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>;
   };
 
-  const handleDelete = async (e, id, username) => {
+  const handleDelete = async (e, username) => {
     e.stopPropagation();
     if (!window.confirm(`Delete user "${username}"?`)) return;
     try {
-      await deleteUser(id);
+      await deleteUser(username);
       fetchUsers();
     } catch (e) {
       alert('Failed to delete user');
@@ -81,7 +82,7 @@ export default function Users() {
       {/* Search */}
       <input
         type="text"
-        placeholder="Search by username or password..."
+        placeholder="Search by username, password or full name..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full mb-4 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
@@ -104,6 +105,7 @@ export default function Users() {
               >
                 Username <SortIcon col="username" />
               </th>
+              <th className="text-left px-4 py-3">Full Name</th>
               <th className="text-left px-4 py-3">Password</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
@@ -111,13 +113,13 @@ export default function Users() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={4} className="text-center py-8 text-gray-500">
+                <td colSpan={5} className="text-center py-8 text-gray-500">
                   Loading...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="text-center py-8 text-gray-500">
+                <td colSpan={5} className="text-center py-8 text-gray-500">
                   No users found
                 </td>
               </tr>
@@ -134,6 +136,7 @@ export default function Users() {
                   >
                     <td className="px-4 py-3 text-gray-400">{u.id}</td>
                     <td className="px-4 py-3 font-medium">{u.username}</td>
+                    <td className="px-4 py-3 text-gray-400">{u.full_name || '-'}</td>
                     <td className="px-4 py-3 text-gray-400 font-mono text-xs">
                       <span
                         className="flex items-center gap-2"
@@ -142,8 +145,8 @@ export default function Users() {
                       >
                         <span>
                           {hoveredId === u.id
-                            ? u.value
-                            : '•'.repeat(Math.min(u.value.length, 20))}
+                            ? u.password
+                            : '•'.repeat(Math.min(u.password.length, 20))}
                         </span>
                         <span className="text-gray-500 select-none text-sm">
                           {hoveredId === u.id ? '🙈' : '👁️'}
@@ -152,7 +155,7 @@ export default function Users() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={(e) => handleDelete(e, u.id, u.username)}
+                        onClick={(e) => handleDelete(e, u.username)}
                         className="text-red-400 hover:text-red-300 text-xs"
                       >
                         Delete
@@ -169,7 +172,6 @@ export default function Users() {
       {selectedUser && (
         <UserModal
           user={selectedUser}
-          username={selectedUser.username}
           onClose={() => setSelectedUser(null)}
           onUpdated={fetchUsers}
         />

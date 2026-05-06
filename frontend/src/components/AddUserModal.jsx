@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { createUser } from '../api/users';
-import client from '../api/client';
 
 export default function AddUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
@@ -26,22 +25,14 @@ export default function AddUserModal({ onClose, onCreated }) {
     setError('');
     setSaving(true);
     try {
-      await createUser({ username: form.username, password: form.password });
-
-      const extras = [];
-      if (form.fullName) extras.push({ attribute: 'Full-Name', value: form.fullName });
-      if (form.email) extras.push({ attribute: 'Email', value: form.email });
-      if (form.phone) extras.push({ attribute: 'Phone', value: form.phone });
-      if (form.notes) extras.push({ attribute: 'Notes', value: form.notes });
-
-      for (const ext of extras) {
-        await client.post('/radius/users', {
-          username: form.username,
-          attribute: ext.attribute,
-          op: ':=',
-          value: ext.value,
-        });
-      }
+      await createUser({
+        username: form.username,
+        password: form.password,
+        full_name: form.fullName || null,
+        email: form.email || null,
+        phone: form.phone || null,
+        notes: form.notes || null,
+      });
       onCreated();
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to create user');
